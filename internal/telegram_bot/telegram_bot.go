@@ -1,25 +1,17 @@
 package telegram_bot
 
 import (
-	"github.com/AlexLevus/telegram-bot/internal/repository"
 	"log"
 	"time"
 	"os"
-	"errors"
 	"fmt"
 
 	tele "gopkg.in/telebot.v3"
 )
 
-func Start(rep *repository.Repository) {
+func Start() {
 	var membersCount int 
 	var chatID int64
-
-	counter, err := rep.GetCounter()
-	fmt.Println(counter.Value)
-	if err != nil {
-		log.Fatalf("Error when get counter")
-	}
 
 	telegramApiToken, exists := os.LookupEnv("TELEGRAM_APITOKEN")
 	if !exists {
@@ -61,6 +53,8 @@ func Start(rep *repository.Repository) {
 		chatID = chat.ID
 
 
+		// при создании чата привзяывать его id к чату
+
 		poll := &tele.Poll{
 			Type:     tele.PollRegular,
 			Question: "Как насчет посмотреть \"Волк с Уолл Стрит\"?",
@@ -80,7 +74,7 @@ func Start(rep *repository.Repository) {
 
 		poll := c.Poll()
 
-		fmt.Printf("%+v\n", poll)
+		fmt.Printf("%+v\n", c.Chat())
 
 		isPollEnded := poll.VoterCount == membersCount - 1
 
@@ -98,7 +92,12 @@ func Start(rep *repository.Repository) {
 			}
 		}
 
-		return errors.New("math: square root of negative number")
+		return nil
+	})
+
+	b.Handle(tele.OnPollAnswer, func(c tele.Context) error {
+		fmt.Printf("%+v\n", c.PollAnswer())
+		return nil
 	})
 
 	b.Start()

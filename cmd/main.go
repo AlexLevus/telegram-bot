@@ -4,17 +4,83 @@ import (
 	"log"
     "github.com/joho/godotenv"
 
-	"github.com/AlexLevus/telegram-bot/internal/app"
+	"context"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"os"
+	"time"
+    "github.com/AlexLevus/telegram-bot/internal/controllers"
+	"github.com/AlexLevus/telegram-bot/internal/routes"
+	tele "gopkg.in/telebot.v3"
+)
+
+var (
+	bot *tele.Bot
+
+	BotController      controllers.BotController
+	BotRouteController routes.BotRouteController
+
+	chatCollection      *mongo.Collection
+	pollCollection      *mongo.Collection
+	suggestionCollection      *mongo.Collection
 )
 
 func init() {
     if err := godotenv.Load(); err != nil {
         log.Print("No .env file found")
     }
+
+	mongoDbUri, exists := os.LookupEnv("MONGODB_URI")
+	if !exists {
+		log.Fatal("Добавьте в файл .env uri к базе MongoDB")
+	}
+
+	dbName, exists := os.LookupEnv("DB_NAME")
+	if !exists {
+		log.Fatal("Добавьте в файл .env название базы данных")
+	}
+
+	telegramApiToken, exists := os.LookupEnv("TELEGRAM_APITOKEN")
+	if !exists {
+		log.Fatal("Добавьте в файл .env api токен Телеграм")
+	}
+
+	clientOptions := options.Client().ApplyURI(mongoDbUri)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, clientOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	database := client.Database(dbName)
+	chatCollection = database.Collection("chats")
+	pollCollection = database.Collection("polls")
+	suggestionCollection = database.Collection("suggestion")
+
+	botSettings := tele.Settings{
+		Token:  telegramApiToken,
+		Poller: &tele.LongPoller{Timeout: 10 * time.Second},
+	}
+
+	b, err := tele.NewBot(botSettings)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	bot = b
+
+	BotController = controllers.NewBotController(bot)
+	BotRouteController = routes.NewBotRouteController(BotController)
 }
 
 func main() {
-	if err := app.Run(); err != nil {
-		log.Fatalf("app.Run: %v", err)
-	}
+	startTelegramBot()
+}
+
+func startTelegramBot() {
+	BotRouteController.BotRoute(bot)
+
+	bot.Start()
 }

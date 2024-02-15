@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,7 +16,7 @@ type Repository struct {
 	collection *mongo.Collection
 }
 
-type Counter struct {
+type Chat struct {
 	Value     int                `bson:"value,omitempty"`
 	UpdatedAt primitive.DateTime `bson:"updatedAt,omitempty"`
 }
@@ -28,29 +27,27 @@ func NewRepository() (*Repository, error) {
 		log.Fatal("Добавьте в файл .env uri к базе MongoDB")
 	}
 
-	client, err := mongo.NewClient(options.Client().ApplyURI(mongoDbUri))
+	dbName, exists := os.LookupEnv("DB_NAME")
+	if !exists {
+		log.Fatal("Добавьте в файл .env название базы данных")
+	}
+
+	clientOptions := options.Client().ApplyURI(mongoDbUri)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	err = client.Connect(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
+	database := client.Database(dbName)
+	chatCollection := database.Collection("chats")
 
-	databases, err := client.ListDatabaseNames(ctx, bson.M{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(databases)
-
-	collection := client.Database("CounterDB").Collection("Counter")
-
-	return &Repository{collection: collection, ctx: ctx}, nil
+	return &Repository{collection: chatCollection, ctx: ctx}, nil
 }
 
-func (repository *Repository) GetCounter() (Counter, error) {
+func (repository *Repository) GetChat() (Chat, error) {
 	cur, err := repository.collection.Find(repository.ctx, bson.D{})
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -63,17 +60,17 @@ func (repository *Repository) GetCounter() (Counter, error) {
 		}
 	}(cur, repository.ctx)
 
-	var counters []Counter
+	var chats []Chat
 
-	err = cur.All(repository.ctx, &counters)
+	err = cur.All(repository.ctx, &chats)
 	if err != nil {
-		log.Fatalf("Error when get Counters from DB")
+		log.Fatalf("Error when get chats from DB")
 	}
 
-	return counters[0], nil
+	return chats[0], nil
 }
 
-func (repository *Repository) UpdateCounter(counter Counter) error {
+func (repository *Repository) UpdateChat(chat Chat) error {
 	id, _ := primitive.ObjectIDFromHex("63692f15b50ce6ea336f9139")
 	filter := bson.D{{"_id", id}}
 
@@ -81,7 +78,7 @@ func (repository *Repository) UpdateCounter(counter Counter) error {
 
 	update := bson.M{
 		"$set": bson.M{
-			"value":     counter.Value + 1,
+			"value":     chat.Value + 1,
 			"updatedAt": updatedAt,
 		},
 	}
