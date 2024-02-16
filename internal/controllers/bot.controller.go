@@ -99,12 +99,12 @@ func (bc *BotController) HandleAddedToGroup(c tele.Context) error {
 		log.Fatal(err)
 	}
 
-	addChatReq := models.AddChatRequest{
+	addChatReq := models.SaveChatRequest{
 		ChatId:       chat.ID,
 		MembersCount: membersCount,
 	}
 
-	err = bc.chatService.AddChat(&addChatReq)
+	err = bc.chatService.SaveChat(&addChatReq)
 
 	return err
 }

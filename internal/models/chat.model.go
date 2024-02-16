@@ -5,7 +5,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-type AddChatRequest struct {
+type SaveChatRequest struct {
 	ChatId    int64    `json:"chat_id" bson:"chat_id" binding:"required"`
 	MembersCount    int    `json:"members_count" bson:"members_count" binding:"required"`
 	AddedAt          time.Time `json:"added_at" bson:"added_at"`

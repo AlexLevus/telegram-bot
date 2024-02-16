@@ -20,7 +20,7 @@ func NewChatService(postCollection *mongo.Collection, ctx context.Context) ChatS
 	return &ChatServiceImpl{postCollection, ctx}
 }
 
-func (c *ChatServiceImpl) AddChat(chat *models.AddChatRequest) error {
+func (c *ChatServiceImpl) SaveChat(chat *models.SaveChatRequest) error {
 	chat.AddedAt = time.Now()
 
 	_, err := c.chatCollection.InsertOne(c.ctx, chat)
