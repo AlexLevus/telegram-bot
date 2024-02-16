@@ -18,4 +18,13 @@ func (rc *BotRouteController) BotRoute(bot *tele.Bot) {
 	bot.Handle("/suggest", rc.botController.SuggestFilm)
 
 	bot.Handle(tele.OnPoll, rc.botController.HandlePollAnswer)
+
+	// в момент создания группы и добавления бота срабатывает OnAddedToGroup
+	bot.Handle(tele.OnAddedToGroup, rc.botController.HandleAddedToGroup)
+
+	// срабатывает в момент добавления пользователя
+	bot.Handle(tele.OnUserJoined, rc.botController.HandleUserJoined)
+
+	// срабатывает в момент удаления пользователя
+	bot.Handle(tele.OnUserLeft, rc.botController.HandleUserLeft)
 }

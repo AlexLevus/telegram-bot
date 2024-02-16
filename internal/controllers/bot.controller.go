@@ -2,6 +2,9 @@ package controllers
 
 import (
 	"fmt"
+
+	"github.com/AlexLevus/telegram-bot/internal/services"
+	"github.com/AlexLevus/telegram-bot/internal/models"
 	tele "gopkg.in/telebot.v3"
 	"log"
 )
@@ -10,11 +13,12 @@ var membersCount int
 var chatID int64
 
 type BotController struct {
-	bot *tele.Bot
+	bot            *tele.Bot
+	chatService    services.ChatService
 }
 
-func NewBotController(bot *tele.Bot) BotController {
-	return BotController{bot}
+func NewBotController(bot *tele.Bot, chatService services.ChatService) BotController {
+	return BotController{bot, chatService}
 }
 
 func (bc *BotController) ShowHelpInfo(c tele.Context) error {
@@ -52,6 +56,8 @@ func (bc *BotController) SuggestFilm(c tele.Context) error {
 	// 	 InlineKeyboard: [][]tele.InlineButton{{ { Text: "Давай!" } }},
 	// }
 
+	fmt.Printf("%+v\n", poll)
+
 	return c.Send(poll)
 }
 
@@ -60,14 +66,14 @@ func (bc *BotController) HandlePollAnswer(c tele.Context) error {
 
 	poll := c.Poll()
 
-	fmt.Printf("%+v\n", c.Chat())
-
 	isPollEnded := poll.VoterCount == membersCount-1
 
 	// TODO: если проголосовали все, кроме бота и создателя опроса
 	if isPollEnded {
 		isPollSuccessed := poll.Options[len(poll.Options)-1].VoterCount == 0
 		chat, _ := bc.bot.ChatByID(chatID)
+
+		// bc.bot.StopPoll(poll.)
 
 		if isPollSuccessed {
 			_, err := bc.bot.Send(chat, "Отлично, все хотят посмотреть \"Волк с Уолл Стрит\"! Добавлю его в закладки")
@@ -83,4 +89,41 @@ func (bc *BotController) HandlePollAnswer(c tele.Context) error {
 	}
 
 	return nil
+}
+
+func (bc *BotController) HandleAddedToGroup(c tele.Context) error {
+	chat := c.Chat()
+	membersCount, err := c.Bot().Len(chat)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	addChatReq := models.AddChatRequest{
+		ChatId:       chat.ID,
+		MembersCount: membersCount,
+	}
+
+	err = bc.chatService.AddChat(&addChatReq)
+
+	return err
+}
+
+func (bc *BotController) HandleMembersCountChange(c tele.Context) error {
+	chat := c.Chat()
+	membersCount, err := c.Bot().Len(chat)
+
+	if err != nil {
+		return err
+	}
+
+	return bc.chatService.UpdateChatMembersCount(chat.ID, membersCount)
+}
+
+func (bc *BotController) HandleUserJoined(c tele.Context) error {
+	return bc.HandleMembersCountChange(c)
+}
+
+func (bc *BotController) HandleUserLeft(c tele.Context) error {
+	return bc.HandleMembersCountChange(c)
 }

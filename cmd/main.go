@@ -11,6 +11,7 @@ import (
 	"time"
     "github.com/AlexLevus/telegram-bot/internal/controllers"
 	"github.com/AlexLevus/telegram-bot/internal/routes"
+	"github.com/AlexLevus/telegram-bot/internal/services"
 	tele "gopkg.in/telebot.v3"
 )
 
@@ -20,7 +21,9 @@ var (
 	BotController      controllers.BotController
 	BotRouteController routes.BotRouteController
 
+	chatService         services.ChatService
 	chatCollection      *mongo.Collection
+
 	pollCollection      *mongo.Collection
 	suggestionCollection      *mongo.Collection
 )
@@ -46,8 +49,7 @@ func init() {
 	}
 
 	clientOptions := options.Client().ApplyURI(mongoDbUri)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.TODO()
 
 	client, err := mongo.Connect(ctx, clientOptions)
 	if err != nil {
@@ -71,7 +73,10 @@ func init() {
 
 	bot = b
 
-	BotController = controllers.NewBotController(bot)
+	chatService = services.NewChatService(chatCollection, ctx)
+
+ 
+	BotController = controllers.NewBotController(bot, chatService)
 	BotRouteController = routes.NewBotRouteController(BotController)
 }
 
