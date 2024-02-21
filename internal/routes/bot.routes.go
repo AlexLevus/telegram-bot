@@ -16,6 +16,7 @@ func NewBotRouteController(botController controllers.BotController) BotRouteCont
 func (rc *BotRouteController) BotRoute(bot *tele.Bot) {
 	bot.Handle("/help", rc.botController.ShowHelpInfo)
 	bot.Handle("/suggest", rc.botController.SuggestFilm)
+	bot.Handle("/suggestions", rc.botController.ShowSuggestions)
 
 	bot.Handle(tele.OnPoll, rc.botController.HandlePollAnswer)
 

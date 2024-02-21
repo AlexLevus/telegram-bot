@@ -24,7 +24,10 @@ var (
 	chatService         services.ChatService
 	chatCollection      *mongo.Collection
 
+	pollService         services.PollService
 	pollCollection      *mongo.Collection
+
+	suggestionService         services.SuggestionService
 	suggestionCollection      *mongo.Collection
 )
 
@@ -59,7 +62,7 @@ func init() {
 	database := client.Database(dbName)
 	chatCollection = database.Collection("chats")
 	pollCollection = database.Collection("polls")
-	suggestionCollection = database.Collection("suggestion")
+	suggestionCollection = database.Collection("suggestions")
 
 	botSettings := tele.Settings{
 		Token:  telegramApiToken,
@@ -73,10 +76,11 @@ func init() {
 
 	bot = b
 
+	pollService = services.NewPollService(pollCollection, ctx)
 	chatService = services.NewChatService(chatCollection, ctx)
+	suggestionService = services.NewSuggestionService(suggestionCollection, ctx)
 
- 
-	BotController = controllers.NewBotController(bot, chatService)
+	BotController = controllers.NewBotController(bot, chatService, pollService, suggestionService)
 	BotRouteController = routes.NewBotRouteController(BotController)
 }
 
